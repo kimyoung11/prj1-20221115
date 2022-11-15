@@ -13,17 +13,19 @@ public class MemberService {
 
 	@Autowired
 	private MemberMapper mapper;
-	
+
 	public int insert(MemberDto member) {
 		
 		return mapper.insert(member);
 	}
 
 	public List<MemberDto> list() {
-		return mapper.selectAll(); 
+		// TODO Auto-generated method stub
+		return mapper.selectAll();
 	}
 
 	public MemberDto getById(String id) {
+		// TODO Auto-generated method stub
 		return mapper.selectById(id);
 	}
 
@@ -44,7 +46,13 @@ public class MemberService {
 	}
 
 	public MemberDto getByEmail(String email) {
+		// TODO Auto-generated method stub
 		return mapper.selectByEmail(email);
+	}
+
+	public MemberDto getByNickName(String nickName) {
+		// TODO Auto-generated method stub
+		return mapper.selectByNickName(nickName);
 	}
 
 }
