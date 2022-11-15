@@ -23,6 +23,25 @@ public class MemberController {
 
 	@Autowired
 	private MemberService service;
+	
+	
+	@GetMapping("existNickName/{nickName}")
+	@ResponseBody
+	public Map<String, Object> existNickName(@PathVariable String nickName) {
+		Map<String, Object> map = new HashMap<>();
+
+		MemberDto member = service.getByNickName(nickName);
+
+		if (member == null) {
+			map.put("status", "not exist");
+			map.put("message", "사용가능한 별명입니다.");
+		} else {
+			map.put("status", "exist");
+			map.put("message", "이미 존재하는 별명입니다.");
+		}
+
+		return map;
+	}
 
 	@PostMapping("existEmail")
 	@ResponseBody
