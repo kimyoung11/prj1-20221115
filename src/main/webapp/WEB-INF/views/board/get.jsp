@@ -2,6 +2,7 @@
     pageEncoding="UTF-8"%>
 <%@ page import="java.net.*" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <%@ taglib prefix="my" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html>
@@ -18,17 +19,47 @@
 		<div class="row">
 			<div class="col">
 			
-	
-				<h1>
-					${board.id }번 게시물
-					 
-					<c:url value="/board/modify" var="modifyLink">
-						<c:param name="id" value="${board.id }"></c:param>
-					</c:url>
-					<a class="btn btn-warning" href="${modifyLink }">
-						<i class="fa-solid fa-pen-to-square"></i>
-					</a>
-				</h1>
+				<div class="d-flex">
+					<h1 class="me-auto">
+						${board.id }번 게시물
+						 
+						<c:url value="/board/modify" var="modifyLink">
+							<c:param name="id" value="${board.id }"></c:param>
+						</c:url>
+						
+						<sec:authentication property="name" var="username" />
+						
+						<%-- 작성자와 authentication.name 같으면 보여줌 --%>
+						<c:if test="${board.writer == username}">
+							<a class="btn btn-warning" href="${modifyLink }">
+								<i class="fa-solid fa-pen-to-square"></i>
+							</a>
+						</c:if>		
+						
+					</h1>
+					<h1>
+						<button 
+							<sec:authorize access="not isAuthenticated()">
+								style="pointer-events: none;"
+							</sec:authorize>
+							id="likeButton"
+							>
+							
+							<c:if test="${board.liked }">
+								<i class="fa-solid fa-thumbs-up"></i>
+							</c:if>
+							<c:if test="${not board.liked }">
+								<i class="fa-regular fa-thumbs-up"></i>
+							</c:if>
+							
+						</button>
+						<span id="likeCount">
+							${board.countLike }
+						</span>
+						
+						
+					</h1>
+				</div>
 			
 				<div class="mb-3">
 					<label class="form-label">
@@ -92,13 +123,21 @@
 		</div>
 		<div class="row">
 			<div class="col">
-				<%-- 댓글 작성 --%>
+			
 				<input type="hidden" id="boardId" value="${board.id }">
-				
-				<div class="input-group">
-					<input type="text" class="form-control" id="replyInput1">
-					<button class="btn btn-outline-secondary" id="replySendButton1"><i class="fa-solid fa-reply"></i></button>
-				</div>
+					
+				<sec:authorize access="isAuthenticated()">
+					<%-- 댓글 작성 --%>
+					<div class="input-group">
+						<input type="text" class="form-control" id="replyInput1">
+						<button class="btn btn-outline-secondary" id="replySendButton1"><i class="fa-solid fa-reply"></i></button>
+					</div>
+				</sec:authorize>
+				<sec:authorize access="not isAuthenticated()">
+					<div class="alert alert-light">
+						댓글을 작성하시려면 로그인하세요.
+					</div>
+				</sec:authorize>
 			</div>
 		</div>
 		
@@ -156,6 +195,30 @@
 <script>
 const ctx = "${pageContext.request.contextPath}";
 
+// 좋아요 버튼 클릭시
+document.querySelector("#likeButton").addEventListener("click", function() {
+	const boardId = document.querySelector("#boardId").value;
+	
+	fetch(`\${ctx}/board/like`, {
+		method : "put",
+		headers : {
+			"Content-Type" : "application/json"
+		},
+		body : JSON.stringify({boardId})
+	})
+	.then(res => res.json())
+	.then(data => {
+		
+		if (data.current == 'liked') {
+			document.querySelector("#likeButton").innerHTML = `<i class="fa-solid fa-thumbs-up"></i>`
+		} else {
+			document.querySelector("#likeButton").innerHTML = `<i class="fa-regular fa-thumbs-up"></i>`
+		}
+		
+		document.querySelector("#likeCount").innerText = data.count;
+	});
+});
+
 listReply();
 
 // 댓글 crud 메시지 토스트
@@ -206,6 +269,17 @@ function listReply() {
 			const modifyReplyButtonId = `modifyReplyButton\${item.id}`;
 			const removeReplyButtonId = `removeReplyButton\${item.id}`;
 			// console.log(item.id);
+			const editButton = `
+				<div>
+					<button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modifyReplyFormModal" data-reply-id="\${item.id}" id="\${modifyReplyButtonId}">
+						<i class="fa-solid fa-pen"></i>
+					</button>
+					<button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#removeReplyConfirmModal" data-reply-id="\${item.id}" id="\${removeReplyButtonId}">
+						<i class="fa-solid fa-x"></i>
+					</button>
+				</div>
+			
+			`
 			const replyDiv = `
 				<div class="list-group-item d-flex">
 					<div class="me-auto">
@@ -217,32 +291,28 @@ function listReply() {
 								\${item.ago}
 							</small>
 					</div>
-					<div>
-						<button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modifyReplyFormModal" data-reply-id="\${item.id}" id="\${modifyReplyButtonId}">
-							<i class="fa-solid fa-pen"></i>
-						</button>
-						<button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#removeReplyConfirmModal" data-reply-id="\${item.id}" id="\${removeReplyButtonId}">
-							<i class="fa-solid fa-x"></i>
-						</button>
-					</div>
+					\${item.editable ? editButton : ''}
 				</div>`;
 			replyListContainer.insertAdjacentHTML("beforeend", replyDiv);
-			// 수정 폼 모달에 댓글 내용 넣기
-			document.querySelector("#" + modifyReplyButtonId)
-				.addEventListener("click", function() {
-					document.querySelector("#modifyFormModalSubmitButton").setAttribute("data-reply-id", this.dataset.replyId);
-					readReplyAndSetModalForm(this.dataset.replyId);
-				});
 			
-			
-			// 삭제확인 버튼에 replyId 옮기기
-			document.querySelector("#" + removeReplyButtonId)
-				.addEventListener("click", function() {
-					// console.log(this.id + "번 삭제버튼 클릭됨");
-					console.log(this.dataset.replyId + "번 댓글 삭제할 예정, 모달 띄움")
-					document.querySelector("#removeConfirmModalSubmitButton").setAttribute("data-reply-id", this.dataset.replyId);
-					// removeReply(this.dataset.replyId);
-				});
+			if (item.editable) {
+				// 수정 폼 모달에 댓글 내용 넣기
+				document.querySelector("#" + modifyReplyButtonId)
+					.addEventListener("click", function() {
+						document.querySelector("#modifyFormModalSubmitButton").setAttribute("data-reply-id", this.dataset.replyId);
+						readReplyAndSetModalForm(this.dataset.replyId);
+					});
+				
+				
+				// 삭제확인 버튼에 replyId 옮기기
+				document.querySelector("#" + removeReplyButtonId)
+					.addEventListener("click", function() {
+						// console.log(this.id + "번 삭제버튼 클릭됨");
+						console.log(this.dataset.replyId + "번 댓글 삭제할 예정, 모달 띄움")
+						document.querySelector("#removeConfirmModalSubmitButton").setAttribute("data-reply-id", this.dataset.replyId);
+						// removeReply(this.dataset.replyId);
+					});
+			}
 		}
 	});
 }

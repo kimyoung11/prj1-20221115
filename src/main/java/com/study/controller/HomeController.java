@@ -9,14 +9,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class HomeController {
 	
 	@RequestMapping("")
-	@ResponseBody
 	private String home() {
-		return "welcome home";
-	}
-	
-	@RequestMapping("index")
-	private void index() {
-		
+		return "redirect:/board/list";
 	}
 	
 }

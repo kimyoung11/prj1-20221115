@@ -14,6 +14,8 @@ public class ReplyDto {
 	private int id;
 	private int boardId;
 	private String content;
+	private String writer;
+	private boolean editable;
 	
 	@JsonFormat(shape = Shape.STRING)
 	private LocalDateTime inserted;
@@ -47,3 +49,4 @@ public class ReplyDto {
 		return result;
 	}
 }
+
