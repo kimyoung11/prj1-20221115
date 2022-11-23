@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 public class HomeController {
 	
+
 	@RequestMapping("")
 	private String home() {
 		return "redirect:/board/list";
